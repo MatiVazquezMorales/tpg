@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Empleado</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+
+    <link rel="stylesheet" href="css/stylesEmpleado.css">
+</head>
+<body>
+
+<div class="layout">
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar">
+                <span class="material-icons">person</span>
+            </div>
+            <div>
+                <p class="profile-name">Martín Rodríguez</p>
+                <p class="profile-role">Desarrollador - Junior</p>
+            </div>
+        </div>
+
+        <nav class="menu">
+            <a href="empleado.html">
+                <span class="material-icons">schedule</span>
+                Cargar Horas
+            </a>
+            <a href="notificacionEmpleado.html">
+                <span class="material-icons">notifications</span>
+                Notificaciones
+            </a>
+            <a href="reporte.html">
+                <span class="material-icons">assessment</span>
+                Reporte
+            </a>
+        </nav>
+
+        <div class="logout">
+            <a href="#">
+                <span class="material-icons">logout</span>
+                Cerrar Sesión
+            </a>
+        </div>
+    </aside>
+
+    <main class="content">
+
+        <section class="main-section">
+            <h1>Registro de Horas</h1>
+            <p class="subtitle">Seleccione un proyecto y una tarea para registrar sus horas.</p>
+
+            <div class="grid-2">
+                <div>
+                    <label>Proyecto</label>
+                    <select>
+                        <option>Seleccione un proyecto...</option>
+                        <option selected>Sistema de Gestión Interno</option>
+                        <option>App Móvil Cliente</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Tarea</label>
+                    <select>
+                        <option>Seleccione una tarea...</option>
+                        <option selected>Diseño de la base de datos</option>
+                        <option>UI para el CRUD del proyecto</option>
+                        <option>Implementación de la lógica de negocio</option>
+                        <option>Gestión de Autenticación y Autorización</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Tarea: Diseño de la base de datos</h2>
+
+                <div class="grid-3">
+                    <div>
+                        <p class="label">Tipo</p>
+                        <p>desarrollo</p>
+                    </div>
+
+                    <div>
+                        <p class="label">Estado</p>
+                        <p class="success">abierta</p>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Fecha</label>
+                        <input type="date">
+                    </div>
+
+                    <div>
+                        <label>Horas</label>
+                        <input type="number" placeholder="horas">
+                    </div>
+                </div>
+
+                <div>
+                    <label>Notas</label>
+                    <textarea rows="4"></textarea>
+                </div>
+
+                <div class="right">
+                    <button class="btn-secondary">Cancelar</button>
+                    <button class="btn-primary">Cargar Horas</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="js/empleado.js"></script>
+</body>
+</html>

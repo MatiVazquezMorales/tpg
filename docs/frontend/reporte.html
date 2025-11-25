@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Horas</title>
+
+    <link rel="stylesheet" href="css/stylesEmpleado.css">
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar">
+                <span class="material-icons">person</span>
+            </div>
+            <div>
+                <p class="profile-name">Martín Rodríguez</p>
+                <p class="profile-role">Desarrollador - Junior</p>
+            </div>
+        </div>
+
+        <nav class="menu">
+            <a href="empleado.html">
+                <span class="material-icons">schedule</span>
+                Cargar Horas
+            </a>
+            <a href="notificacionEmpleado.html">
+                <span class="material-icons">notifications</span>
+                Notificaciones
+            </a>
+            <a href="reporte.html">
+                <span class="material-icons">assessment</span>
+                Reporte
+            </a>
+        </nav>
+
+        <div class="logout">
+            <a href="#"><span class="material-icons">logout</span> Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <main class="content">
+
+        <h1>Reporte de horas semanal</h1>
+        <p class="subtitle">Vista del calendario de Martín Rodríguez (Desarrollador - Junior)</p>
+
+        <div class="week-nav">
+            <button class="week-btn">‹</button>
+            <span class="week-label">Octubre 21 - 25, 2024</span>
+            <button class="week-btn">›</button>
+        </div>
+
+        <div class="calendar card">
+
+            <div class="calendar-header">
+                <div class="empty"></div>
+                <div class="day-header">Lun <div class="day-number">21</div></div>
+                <div class="day-header">Mar <div class="day-number">22</div></div>
+                <div class="day-header">Mié <div class="day-number">23</div></div>
+                <div class="day-header highlight">Jue <div class="day-number highlight">24</div></div>
+                <div class="day-header">Vie <div class="day-number">25</div></div>
+            </div>
+
+            <div class="calendar-body">
+
+                <div class="time-column">
+                    <div class="time-block">9:00</div>
+                    <div class="time-block">10:00</div>
+                    <div class="time-block">11:00</div>
+                    <div class="time-block">12:00</div>
+                    <div class="time-block">13:00</div>
+                    <div class="time-block">14:00</div>
+                    <div class="time-block">15:00</div>
+                    <div class="time-block">16:00</div>
+                    <div class="time-block">17:00</div>
+                </div>
+
+                <div class="event-container">
+                    <div class="event green" style="grid-row: 1 / span 3;">
+                        <b>Proyecto 3</b><br>Testing de nueva feature<br>9:00 - 12:00
+                    </div>
+                    <div class="event cyan" style="grid-row: 5 / span 2;">
+                        <b>Proyecto 5</b><br>Revisión de casos de uso<br>13:00 - 15:00
+                    </div>
+                </div>
+
+                <div class="event-container"></div>
+
+                <div class="event-container">
+                    <div class="event yellow" style="grid-row: 2 / span 2;">
+                        <b>Soporte</b><br>Atención de tickets<br>10:00 - 12:00
+                    </div>
+                    <div class="event green" style="grid-row: 5 / span 3;">
+                        <b>Proyecto 3</b><br>Pruebas de regresión<br>13:30 - 16:00
+                    </div>
+                </div>
+
+                <div class="event-container">
+                    <div class="event blue" style="grid-row: 1 / span 4;">
+                        <b>Proyecto 5</b><br>Reunión de planificación<br>9:00 - 13:00
+                    </div>
+                </div>
+
+                <div class="event-container"></div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script src="js/empleado.js"></script>
+
+</body>
+</html>
