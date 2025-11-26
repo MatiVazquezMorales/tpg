@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Empleado</title>
+    <title>Carga de Horas</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -19,13 +19,13 @@
                 <span class="material-icons">person</span>
             </div>
             <div>
-                <p class="profile-name">Martín Rodríguez</p>
-                <p class="profile-role">Desarrollador - Junior</p>
+                <p class="profile-name">Cargando...</p>
+                <p class="profile-role">-</p>
             </div>
         </div>
 
         <nav class="menu">
-            <a href="empleado.html">
+            <a href="empleado.html" class="active">
                 <span class="material-icons">schedule</span>
                 Cargar Horas
             </a>
@@ -51,65 +51,54 @@
 
         <section class="main-section">
             <h1>Registro de Horas</h1>
-            <p class="subtitle">Seleccione un proyecto y una tarea para registrar sus horas.</p>
+            <p class="subtitle">Seleccione una de sus tareas asignadas para registrar horas.</p>
 
-            <div class="grid-2">
-                <div>
-                    <label>Proyecto</label>
-                    <select>
-                        <option>Seleccione un proyecto...</option>
-                        <option selected>Sistema de Gestión Interno</option>
-                        <option>App Móvil Cliente</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label>Tarea</label>
-                    <select>
-                        <option>Seleccione una tarea...</option>
-                        <option selected>Diseño de la base de datos</option>
-                        <option>UI para el CRUD del proyecto</option>
-                        <option>Implementación de la lógica de negocio</option>
-                        <option>Gestión de Autenticación y Autorización</option>
-                    </select>
-                </div>
+            <div style="margin: 20px 0;">
+                <label for="select-tarea" style="display:block; margin-bottom:8px; font-weight:500;">Mis Tareas Asignadas</label>
+                <select id="select-tarea" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="">Cargando sus tareas...</option>
+                </select>
             </div>
 
-            <div class="card">
-                <h2>Tarea: Diseño de la base de datos</h2>
+            <div id="detalle-carga" class="card" style="display: none;">
+                
+                <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <h3 style="margin: 0 0 5px 0; color: #1e3a8a; font-size: 16px;">Proyecto: <span id="info-proyecto-nombre">...</span></h3>
+                    <p id="info-proyecto-desc" style="margin: 0; color: #475569; font-size: 14px; line-height: 1.4;">...</p>
+                </div>
+
+                <h2 id="titulo-tarea" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">-</h2>
 
                 <div class="grid-3">
                     <div>
-                        <p class="label">Tipo</p>
-                        <p>desarrollo</p>
+                        <p id="info-tipo">-</p>
                     </div>
 
                     <div>
-                        <p class="label">Estado</p>
-                        <p class="success">abierta</p>
+                        <p id="info-estado">-</p>
                     </div>
                 </div>
 
                 <div class="grid-2">
                     <div>
-                        <label>Fecha</label>
-                        <input type="date">
+                        <label for="input-fecha">Fecha</label>
+                        <input type="date" id="input-fecha">
                     </div>
 
                     <div>
-                        <label>Horas</label>
-                        <input type="number" placeholder="horas">
+                        <label for="input-horas">Horas</label>
+                        <input type="number" id="input-horas" placeholder="Ej: 4.5" min="0" max="24" step="0.5">
                     </div>
                 </div>
 
                 <div>
-                    <label>Notas</label>
-                    <textarea rows="4"></textarea>
+                    <label for="input-notas">Notas</label>
+                    <textarea id="input-notas" rows="4" placeholder="Descripción del trabajo realizado..."></textarea>
                 </div>
 
                 <div class="right">
-                    <button class="btn-secondary">Cancelar</button>
-                    <button class="btn-primary">Cargar Horas</button>
+                    <button id="btn-cancelar" class="btn-secondary">Limpiar</button>
+                    <button id="btn-cargar" class="btn-primary">Registrar Horas</button>
                 </div>
             </div>
         </section>

@@ -9,20 +9,20 @@ from uuid import UUID
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://usuario:password@localhost:5432/timesheet_db"
+    "postgresql://usuario:lospatos1769@localhost:5432/timesheet_db"
 )
 
 # USUARIO DE DESARROLLO 
 
 # ID del recurso que se usará para todas las operaciones
 # Cambia este valor por el ID del recurso con el que quieras trabajar
-RECURSO_ID_DESARROLLO = "ff14a491-e26d-4092-86ea-d76f20c165d1"  # Martin Garcia
+RECURSO_ID_DESARROLLO = "2e6ecd47-fa18-490e-b25a-c9101a398b6d" #(Lucia Perez)
 
 # Recursos disponibles en la API mock:
-# - ff14a491-e26d-4092-86ea-d76f20c165d1 (Martin Garcia)
-# - 2e6ecd47-fa18-490e-b25a-c9101a398b6d (Lucia Perez)
-# - 47f744bb-0553-497a-b6e3-fdb64ddaca2a (Mariana Juarez)
-# - a21147f8-6538-46d8-95ac-9ddf95ff8c29 (Horacio Martinez)
+# - "ff14a491-e26d-4092-86ea-d76f20c165d1" #(Martin Garcia)
+# - "2e6ecd47-fa18-490e-b25a-c9101a398b6d" #(Lucia Perez)
+# - "47f744bb-0553-497a-b6e3-fdb64ddaca2a" #(Mariana Juarez)
+# - "a21147f8-6538-46d8-95ac-9ddf95ff8c29"  #(Horacio Martinez)
 
 def get_recurso_id_desarrollo() -> UUID:
     """Retorna el UUID del recurso de desarrollo"""

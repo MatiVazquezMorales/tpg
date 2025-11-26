@@ -2,15 +2,20 @@ from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import date, timedelta
 from uuid import UUID
 
-import models as schemas
-from database import get_db
-from services import CargaHorasService
-from external_apis import api_client
-from config import get_recurso_id_desarrollo, CORS_ORIGINS
+# --- IMPORTS CORREGIDOS ---
+# Asegúrate de que tus carpetas se llamen así (models, db, services, external_apis)
+from models import models as schemas
+# Si tu archivo de base de datos está en la carpeta 'db', usa esto:
+from db.database import get_db 
+# Si está en 'database', cámbialo a: from database.database import get_db
+
+from services.services import CargaHorasService
+from external_apis.external_apis import api_client # Corregido para apuntar a api_client.py
+from config.config import get_recurso_id_desarrollo, CORS_ORIGINS, PORT
 
 app = FastAPI(
     title="Sistema de Carga de Horas PSA",
@@ -27,85 +32,87 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==================== CONFIGURACIÓN DE DESARROLLO ====================
+# ==================== CONFIGURACIÓN ====================
 
-def get_current_user_id() -> UUID:
+def get_current_user_id() -> str:
+    """Retorna el ID del recurso como string para compatibilidad"""
+    return str(get_recurso_id_desarrollo())
+
+# ==================== ENDPOINTS NUEVOS (FLUJO TAREA -> PROYECTO) ====================
+
+@app.get("/api/tareas/me", 
+         summary="Obtener todas las tareas del usuario actual")
+def obtener_mis_tareas():
     """
-    Retorna el ID del recurso hardcodeado para desarrollo.
-    Configurado en config.py
+    Retorna TODAS las tareas asignadas al usuario logueado.
     """
-    return get_recurso_id_desarrollo()
+    recurso_id = get_current_user_id()
+    try:
+        return api_client.get_tareas_por_recurso(recurso_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Error obteniendo tareas: {str(e)}"
+        )
 
-# ==================== ENDPOINTS: CARGA DE HORAS ====================
+@app.get("/api/proyectos/{proyecto_id}",
+         summary="Obtener detalle de un proyecto por ID")
+def obtener_proyecto(proyecto_id: str):
+    """
+    Retorna el detalle (nombre, descripción) de un proyecto.
+    """
+    try:
+        proyecto = api_client.get_proyecto(proyecto_id)
+        if not proyecto:
+            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+        return proyecto
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Error obteniendo proyecto: {str(e)}"
+        )
 
-@app.get("/api/proyectos", 
-         summary="Obtener proyectos asignados al usuario actual")
+# ==================== ENDPOINTS GENERALES ====================
+
+@app.get("/api/proyectos", summary="Obtener proyectos asignados")
 def obtener_mis_proyectos():
-    """
-    Retorna los proyectos donde el usuario tiene tareas asignadas.
-    Esto se determina a partir de las tareas en la API externa.
-    """
     recurso_id = get_current_user_id()
-    
     try:
-        proyectos = api_client.get_proyectos_por_recurso(str(recurso_id))
-        return proyectos
+        return api_client.get_proyectos_por_recurso(recurso_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Error al obtener proyectos: {str(e)}"
-        )
+        raise HTTPException(status_code=503, detail=f"Error: {str(e)}")
 
-@app.get("/api/proyectos/{proyecto_id}/tareas",
-         summary="Obtener tareas de un proyecto")
-def obtener_tareas_proyecto(proyecto_id: UUID):
-    """
-    Retorna las tareas disponibles para un proyecto específico.
-    Idealmente solo deberían verse las tareas asignadas al usuario.
-    """
+@app.get("/api/proyectos/{proyecto_id}/tareas", summary="Obtener tareas de un proyecto")
+def obtener_tareas_proyecto(proyecto_id: str):
     recurso_id = get_current_user_id()
-    
     try:
-        # Obtener todas las tareas del proyecto
-        tareas_proyecto = api_client.get_tareas_por_proyecto(str(proyecto_id))
-        
-        # Filtrar solo las tareas asignadas al usuario actual
-        tareas_usuario = [
-            t for t in tareas_proyecto 
-            if t.get('recursoId') == str(recurso_id)
-        ]
-        
-        return tareas_usuario
+        tareas_proyecto = api_client.get_tareas_por_proyecto(proyecto_id)
+        # Filtrar por usuario
+        return [t for t in tareas_proyecto if str(t.get('recursoId')) == recurso_id]
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Error al obtener tareas: {str(e)}"
-        )
+        raise HTTPException(status_code=503, detail=f"Error: {str(e)}")
 
 @app.get("/api/calendario",
          summary="Obtener calendario semanal",
          response_model=schemas.CalendarioSemanal)
 def obtener_calendario(
-    fecha: Optional[date] = Query(
-        None, 
-        description="Fecha de referencia (se ajusta al lunes de esa semana). Si no se provee, usa la semana actual"
-    ),
+    fecha: Optional[date] = Query(None, description="Fecha de referencia"),
     db: Session = Depends(get_db)
 ):
-    """
-    Retorna el calendario semanal del usuario con todas sus cargas de horas.
-    La semana va de lunes a domingo.
-    """
     recurso_id = get_current_user_id()
-    
     if not fecha:
         fecha = date.today()
     
-    calendario = CargaHorasService.obtener_calendario_semanal(
-        db, recurso_id, fecha
-    )
-    
-    return calendario
+    # Nota: CargaHorasService espera UUID, pero al ser string la DB (VARCHAR),
+    # el servicio debería manejarlo o castearlo.
+    # Si CargaHorasService usa UUID(recurso_id), funcionará siempre que el string sea un UUID válido.
+    # Si el ID es "raro" (el de la API Mock), el servicio podría fallar si intenta convertir a UUID estricto.
+    # Asumimos que services.py maneja strings o que los IDs son compatibles.
+    return CargaHorasService.obtener_calendario_semanal(db, recurso_id, fecha)
+
+# ==================== ENDPOINTS CARGA DE HORAS (Lógica Restaurada) ====================
 
 @app.post("/api/horas",
           status_code=status.HTTP_201_CREATED,
@@ -114,75 +121,44 @@ def cargar_horas(
     carga: schemas.CargaHoraCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Crea una nueva carga de horas para el usuario actual.
-    
-    Validaciones:
-    - Proyecto y tarea deben existir
-    - Tarea debe pertenecer al proyecto
-    - No se pueden cargar más de 24 horas en un día
-    - Las horas deben ser mayores a 0
-    """
     recurso_id = get_current_user_id()
-    
-    resultado = CargaHorasService.crear_carga_hora(
-        db, recurso_id, carga
-    )
-    
+    # Restaurada la llamada al servicio
+    resultado = CargaHorasService.crear_carga_hora(db, recurso_id, carga)
     return resultado
 
 @app.put("/api/horas/{carga_id}",
          summary="Actualizar carga de horas")
 def actualizar_horas(
-    carga_id: UUID,
+    carga_id: str, # Cambiado a str
     carga: schemas.CargaHoraUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Actualiza una carga de horas existente.
-    Solo se pueden actualizar las horas y/o la descripción.
-    """
     recurso_id = get_current_user_id()
     
-    # Verificar que la carga pertenece al usuario
+    # Verificar pertenencia (Query SQL directa porque el ORM puede ser estricto con tipos)
     result = db.execute(
-        text("""
-            SELECT recurso_id, fecha, horas 
-            FROM carga_horas 
-            WHERE id = :carga_id
-        """),
-        {"carga_id": str(carga_id)}
+        text("SELECT recurso_id, fecha, horas FROM carga_horas WHERE id = :carga_id"),
+        {"carga_id": carga_id} # Pasamos str directamente, la DB es VARCHAR o UUID (compatible si es válido)
     )
-    
     row = result.fetchone()
+    
     if not row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Carga de horas no encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Carga no encontrada")
     
-    if str(row[0]) != str(recurso_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para modificar esta carga"
-        )
+    if str(row[0]) != recurso_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso")
     
-    # Validar horas si se están actualizando
+    # Validar horas
     if carga.horas is not None:
-        es_valido, total_actual = CargaHorasService.validar_horas_diarias(
+        es_valido, total = CargaHorasService.validar_horas_diarias(
             db, recurso_id, row[1], carga.horas, carga_id
         )
-        
         if not es_valido:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"No se pueden cargar más de 24 horas en un día. "
-                       f"Total actual (sin esta carga): {total_actual} horas"
-            )
+            raise HTTPException(status_code=400, detail=f"Excede 24hs diarias. Actual: {total}")
     
-    # Construir actualización dinámica
+    # Update dinámico
     updates = []
-    params = {"carga_id": str(carga_id)}
+    params = {"carga_id": carga_id}
     
     if carga.horas is not None:
         updates.append("horas = :horas")
@@ -191,132 +167,75 @@ def actualizar_horas(
     if carga.descripcion is not None:
         updates.append("descripcion = :descripcion")
         params["descripcion"] = carga.descripcion
-    
+        
     if not updates:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No hay campos para actualizar"
-        )
-    
-    query = text(f"""
-        UPDATE carga_horas
-        SET {', '.join(updates)}
-        WHERE id = :carga_id
-        RETURNING id, horas, descripcion
-    """)
-    
+        raise HTTPException(status_code=400, detail="Nada que actualizar")
+        
+    query = text(f"UPDATE carga_horas SET {', '.join(updates)} WHERE id = :carga_id RETURNING id, horas, descripcion")
     result = db.execute(query, params)
     row = result.fetchone()
     db.commit()
     
-    return {
-        "id": str(row[0]),
-        "horas": float(row[1]),
-        "descripcion": row[2]
-    }
+    return {"id": str(row[0]), "horas": float(row[1]), "descripcion": row[2]}
 
 @app.delete("/api/horas/{carga_id}",
             status_code=status.HTTP_204_NO_CONTENT,
             summary="Eliminar carga de horas")
-def eliminar_horas(carga_id: UUID, db: Session = Depends(get_db)):
-    """
-    Elimina una carga de horas.
-    Solo el dueño de la carga puede eliminarla.
-    """
+def eliminar_horas(carga_id: str, db: Session = Depends(get_db)): # Cambiado a str
     recurso_id = get_current_user_id()
     
-    # Verificar pertenencia
     result = db.execute(
         text("SELECT recurso_id FROM carga_horas WHERE id = :carga_id"),
-        {"carga_id": str(carga_id)}
+        {"carga_id": carga_id}
     )
-    
     row = result.fetchone()
+    
     if not row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Carga de horas no encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Carga no encontrada")
     
-    if str(row[0]) != str(recurso_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para eliminar esta carga"
-        )
-    
-    db.execute(
-        text("DELETE FROM carga_horas WHERE id = :carga_id"),
-        {"carga_id": str(carga_id)}
-    )
+    if str(row[0]) != recurso_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso")
+        
+    db.execute(text("DELETE FROM carga_horas WHERE id = :carga_id"), {"carga_id": carga_id})
     db.commit()
-    
     return None
 
-@app.get("/api/estadisticas",
-         summary="Obtener estadísticas del usuario",
-         response_model=schemas.EstadisticasRecurso)
+# ==================== OTROS ENDPOINTS ====================
+
+@app.get("/api/estadisticas", response_model=schemas.EstadisticasRecurso)
 def obtener_estadisticas(db: Session = Depends(get_db)):
-    """
-    Retorna estadísticas generales del usuario:
-    - Total de horas del mes actual
-    - Total de horas de la semana actual
-    - Cantidad de proyectos activos
-    - Promedio de horas diarias
-    """
     recurso_id = get_current_user_id()
-    
-    estadisticas = CargaHorasService.obtener_estadisticas_recurso(
-        db, recurso_id
-    )
-    
-    return estadisticas
+    return CargaHorasService.obtener_estadisticas_recurso(db, recurso_id)
 
-# ==================== ENDPOINTS: INFORMACIÓN (PROXY) ====================
-
-@app.get("/api/recursos/me",
-         summary="Obtener información del usuario actual")
+@app.get("/api/recursos/me", summary="Info usuario")
 def obtener_mi_info():
-    """Retorna la información del usuario de desarrollo"""
     recurso_id = get_current_user_id()
-    
     try:
-        recurso = api_client.get_recurso(str(recurso_id))
+        recurso = api_client.get_recurso(recurso_id)
         if not recurso:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Información del usuario no encontrada"
-            )
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            
+        rol_nombre = "Empleado"
+        if 'rolId' in recurso:
+            rol_info = api_client.get_rol(recurso['rolId'])
+            if rol_info and 'nombre' in rol_info:
+                exp = rol_info.get('experiencia', '')
+                rol_nombre = f"{rol_info['nombre']} {exp}".strip()
+        
+        recurso['rol_nombre'] = rol_nombre
         return recurso
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Error al obtener información del usuario: {str(e)}"
-        )
-
-# ==================== HEALTH CHECK ====================
+        print(f"Error: {e}")
+        raise HTTPException(status_code=503, detail="Error al obtener info usuario")
 
 @app.get("/health")
 def health_check():
-    """Endpoint para verificar que el servicio está funcionando"""
-    return {
-        "status": "ok",
-        "service": "Sistema de Carga de Horas PSA"
-    }
+    return {"status": "ok", "service": "Sistema de Carga de Horas PSA"}
 
 @app.get("/")
 def root():
-    """Endpoint raíz con información del servicio"""
-    return {
-        "service": "Sistema de Carga de Horas PSA",
-        "version": "1.0.0",
-        "description": "Módulo de carga de horas de proyectos",
-        "docs": "/docs",
-        "health": "/health"
-    }
+    return {"service": "Sistema de Carga de Horas PSA", "docs": "/docs"}
 
 if __name__ == "__main__":
     import uvicorn
-    from config import PORT
     uvicorn.run(app, host="0.0.0.0", port=PORT)

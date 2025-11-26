@@ -7,8 +7,8 @@ from typing import List, Optional, Tuple, Dict, Any
 from fastapi import HTTPException, status
 import calendar
 
-import models as schemas
-from external_apis import api_client
+from models import models as schemas
+from external_apis.external_apis import api_client
 
 # Mapeo de dias
 DIAS_SEMANA = {
