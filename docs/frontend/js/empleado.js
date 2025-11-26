@@ -1,11 +1,9 @@
-// docs/frontend/js/empleado.js
-
 const API_URL = "http://localhost:8000/api";
 
 document.addEventListener("DOMContentLoaded", function () {
     inicializarSidebar();
     cargarUsuario();
-    cargarMisTareas(); // <-- Nuevo punto de entrada: Cargar tareas directamente
+    cargarMisTareas();
     setupListeners();
 });
 
@@ -21,6 +19,60 @@ function inicializarSidebar() {
     });
 }
 
+// --- Lógica de Notificaciones (Toasts) ---
+
+function mostrarNotificacion() {
+    const toast = document.getElementById('toast-exito');
+    const closeIcon = document.getElementById('toast-close');
+    
+    if (!toast) return;
+
+    // Mostrar
+    toast.classList.add('active');
+
+    // Ocultar automáticamente después de 4 segundos
+    let temporizador = setTimeout(() => {
+        toast.classList.remove('active');
+    }, 4000);
+
+    // Cerrar al hacer click en la X
+    if (closeIcon) {
+        closeIcon.onclick = () => {
+            toast.classList.remove('active');
+            clearTimeout(temporizador);
+        };
+    }
+}
+
+function mostrarError(mensaje) {
+    const toast = document.getElementById('toast-error');
+    const msgElement = document.getElementById('toast-error-msg');
+    const closeIcon = document.getElementById('toast-error-close');
+    
+    if (!toast) return;
+
+    // Actualizar el mensaje de error
+    if (msgElement) {
+        msgElement.textContent = mensaje;
+    }
+
+    // Mostrar
+    toast.classList.add('active');
+
+    // Ocultar automáticamente después de 5 segundos (un poco más largo para leer el error)
+    let temporizador = setTimeout(() => {
+        toast.classList.remove('active');
+    }, 5000);
+
+    // Cerrar al hacer click en la X
+    if (closeIcon) {
+        closeIcon.onclick = () => {
+            toast.classList.remove('active');
+            clearTimeout(temporizador);
+        };
+    }
+}
+
 // --- Lógica de Datos ---
 
 async function cargarUsuario() {
@@ -34,13 +86,11 @@ async function cargarUsuario() {
     } catch (e) { console.error(e); }
 }
 
-// 1. CARGAR TODAS LAS TAREAS ASIGNADAS (Nuevo flujo)
 async function cargarMisTareas() {
     const select = document.getElementById('select-tarea');
     select.innerHTML = '<option value="">Cargando tareas...</option>';
 
     try {
-        // Consume el endpoint nuevo que creamos en el backend
         const res = await fetch(`${API_URL}/tareas/me`);
         if (!res.ok) throw new Error("Error cargando tareas");
         
@@ -64,7 +114,6 @@ async function cargarMisTareas() {
     }
 }
 
-// 2. BUSCAR INFO DEL PROYECTO (Se llama al seleccionar tarea)
 async function cargarInfoProyecto(proyectoId) {
     const nombreElem = document.getElementById('info-proyecto-nombre');
     const descElem = document.getElementById('info-proyecto-desc');
@@ -78,7 +127,6 @@ async function cargarInfoProyecto(proyectoId) {
         
         const proyecto = await res.json();
         
-        // Actualizamos el bloque de información del proyecto en el HTML
         nombreElem.textContent = proyecto.nombre;
         descElem.textContent = proyecto.descripcion;
         
@@ -101,37 +149,31 @@ function setupListeners() {
             return;
         }
 
-        // Recuperamos el objeto tarea completo desde la memoria
         const tareas = JSON.parse(e.target.dataset.tareas || "[]");
         const tarea = tareas.find(t => t.id == tareaId);
 
         if (tarea) {
-            // 1. Mostrar detalles de la tarea
             document.getElementById('titulo-tarea').textContent = tarea.nombre;
-            document.getElementById('info-tipo').textContent = "Desarrollo"; // Ajustar si la API trae 'tipo'
+            document.getElementById('info-tipo').textContent = "Desarrollo"; 
             
             const estadoElem = document.getElementById('info-estado');
             estadoElem.textContent = tarea.estado;
             
-            // Estilo del estado
-            estadoElem.className = ''; // Limpiar
+            estadoElem.className = ''; 
             if (tarea.estado === 'abierta' || tarea.estado === 'en curso') {
                 estadoElem.style.color = 'green';
             } else {
                 estadoElem.style.color = 'red';
             }
 
-            // 2. Cargar información del Proyecto Automáticamente
             if (tarea.proyectoId) {
                 cargarInfoProyecto(tarea.proyectoId);
             } else {
                 document.getElementById('info-proyecto-nombre').textContent = "Sin Proyecto";
             }
 
-            // 3. Mostrar el formulario
             card.style.display = 'block';
             
-            // Poner fecha de hoy por defecto si está vacío
             const inputFecha = document.getElementById('input-fecha');
             if (!inputFecha.value) {
                 inputFecha.valueAsDate = new Date();
@@ -139,13 +181,10 @@ function setupListeners() {
         }
     });
 
-    // BOTÓN CANCELAR / LIMPIAR
+    // BOTÓN CANCELAR
     document.getElementById('btn-cancelar').addEventListener('click', () => {
         document.getElementById('input-horas').value = "";
         document.getElementById('input-notas').value = "";
-        // Opcional: Resetear select
-        // document.getElementById('select-tarea').value = "";
-        // document.getElementById('detalle-carga').style.display = "none";
     });
 
     // BOTÓN CARGAR HORAS
@@ -153,7 +192,6 @@ function setupListeners() {
         const btn = document.getElementById('btn-cargar');
         const tareaId = document.getElementById('select-tarea').value;
         
-        // Buscamos la tarea de nuevo para sacar el ID del proyecto (necesario para el backend)
         const tareas = JSON.parse(document.getElementById('select-tarea').dataset.tareas || "[]");
         const tarea = tareas.find(t => t.id == tareaId);
         
@@ -161,16 +199,28 @@ function setupListeners() {
         const horas = document.getElementById('input-horas').value;
         const notas = document.getElementById('input-notas').value;
 
-        // Validaciones
-        if (!tareaId || !fecha || !horas) {
-            alert("Por favor complete los campos obligatorios (Tarea, Fecha, Horas)");
+        // Validación local básica
+        if (!tareaId || !fecha || !horas || !notas) {
+            mostrarError("Por favor complete los campos obligatorios (Tarea, Fecha, Horas, Notas)");
             return;
         }
 
-        // Armamos el paquete para enviar
+        const horasNum = parseFloat(horas);
+        if (horasNum > 8) {
+            mostrarError("No se permite cargar más de 8 horas en un solo registro.");
+            return; // El 'return' detiene la ejecución, así no llama a la API.
+        }
+        // --------------------------------------------------
+
+        // Validación 3: Horas negativas (por seguridad extra)
+        if (horasNum <= 0) {
+             mostrarError("Las horas deben ser mayores a 0.");
+             return;
+        }
+
         const payload = {
             tarea_id: tareaId,
-            proyecto_id: tarea.proyectoId, // <-- Dato crucial obtenido internamente
+            proyecto_id: tarea.proyectoId,
             fecha: fecha,
             horas: parseFloat(horas),
             descripcion: notas
@@ -187,18 +237,26 @@ function setupListeners() {
             });
 
             if (res.ok) {
-                alert("¡Carga de horas registrada con éxito!");
-                // Limpiar formulario
+                // ¡Éxito! Mostramos el cartel verde
+                mostrarNotificacion();
+                
+                // Limpiamos formulario
                 document.getElementById('input-horas').value = "";
                 document.getElementById('input-notas').value = "";
             } else {
-                const err = await res.json();
-                alert("Error al cargar: " + (err.detail || "Error desconocido"));
+                // Si hay error (ej: > 8 horas), mostramos el cartel rojo con el detalle
+                try {
+                    const err = await res.json();
+                    // err.detail contiene el mensaje del backend ("No se pueden cargar más de 8 horas...")
+                    mostrarError(err.detail || "Ocurrió un error desconocido");
+                } catch (jsonError) {
+                    mostrarError(`Error del servidor (${res.status}). Intente nuevamente.`);
+                }
             }
 
         } catch (error) {
             console.error(error);
-            alert("Error de conexión con el servidor.");
+            mostrarError("Error de conexión con el servidor. Verifique que el backend esté corriendo.");
         } finally {
             btn.textContent = "Registrar Horas";
             btn.disabled = false;

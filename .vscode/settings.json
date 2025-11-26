@@ -6,7 +6,7 @@
             "server": "localhost",
             "port": 5432,
             "driver": "PostgreSQL",
-            "name": "timesheet db",
+            "name": "Timesheet DB",
             "database": "timesheet_db",
             "username": "postgres"
         }

@@ -9,7 +9,7 @@ from uuid import UUID
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://usuario:lospatos1769@localhost:5432/timesheet_db"
+    "postgresql://postgres:lospatos1769@localhost:5432/timesheet_db"
 )
 
 # USUARIO DE DESARROLLO 

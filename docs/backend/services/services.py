@@ -2,11 +2,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from uuid import UUID
 from typing import List, Optional, Tuple, Dict, Any
 from fastapi import HTTPException, status
 import calendar
 
+# Quitamos UUID porque usamos str para evitar conflictos con IDs externos no estándar
 from models import models as schemas
 from external_apis.external_apis import api_client
 
@@ -27,13 +27,13 @@ class CargaHorasService:
     @staticmethod
     def validar_horas_diarias(
         db: Session, 
-        recurso_id: UUID, 
+        recurso_id: str,  # Cambiado a str
         fecha: date, 
         nuevas_horas: Decimal, 
-        excluir_id: Optional[UUID] = None
+        excluir_id: Optional[str] = None # Cambiado a str
     ) -> Tuple[bool, Decimal]:
         """
-        Valida que no se excedan 24 horas en un dia.
+        Valida que no se excedan 8 horas en un dia.
         Retorna (es_valido, total_actual)
         """
         query = """
@@ -44,69 +44,54 @@ class CargaHorasService:
         """
         
         params = {
-            "recurso_id": str(recurso_id),
+            "recurso_id": recurso_id,
             "fecha": fecha
         }
         
         if excluir_id:
             query += " AND id != :excluir_id"
-            params["excluir_id"] = str(excluir_id)
+            params["excluir_id"] = excluir_id
         
         result = db.execute(text(query), params)
         total_actual = Decimal(str(result.scalar()))
         total_con_nuevas = total_actual + nuevas_horas
         
-        return (total_con_nuevas <= 24, total_actual)
+        # --- REGLA DE NEGOCIO: Límite de 8 horas ---
+        return (total_con_nuevas <= 8, total_actual)
     
     @staticmethod
     def crear_carga_hora(
         db: Session, 
-        recurso_id: UUID, 
+        recurso_id: str, # Cambiado a str
         carga: schemas.CargaHoraCreate
     ) -> Dict[str, Any]:
         """Crea una nueva carga de horas"""
         
-        # Validar que el proyecto existe en la API externa
-        proyecto = api_client.get_proyecto(str(carga.proyecto_id))
+        # Validaciones de existencia (API Externa)
+        proyecto = api_client.get_proyecto(carga.proyecto_id)
         if not proyecto:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Proyecto no encontrado"
-            )
+            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
         
-        # Validar que la tarea existe
-        tarea = api_client.get_tarea(str(carga.tarea_id))
+        tarea = api_client.get_tarea(carga.tarea_id)
         if not tarea:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Tarea no encontrada"
-            )
+            raise HTTPException(status_code=404, detail="Tarea no encontrada")
         
-        # Validar que la tarea pertenece al proyecto
-        if tarea.get('proyectoId') != str(carga.proyecto_id):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"La tarea no pertenece al proyecto especificado"
-            )
+        if tarea.get('proyectoId') != carga.proyecto_id:
+            raise HTTPException(status_code=400, detail="La tarea no pertenece al proyecto especificado")
         
-        # Validar que el recurso existe
-        recurso = api_client.get_recurso(str(recurso_id))
+        recurso = api_client.get_recurso(recurso_id)
         if not recurso:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Recurso no encontrado"
-            )
+            raise HTTPException(status_code=404, detail="Recurso no encontrado")
         
-        # Validar horas diarias
+        # Validar horas diarias (8hs max)
         es_valido, total_actual = CargaHorasService.validar_horas_diarias(
             db, recurso_id, carga.fecha, carga.horas
         )
         
         if not es_valido:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"No se pueden cargar más de 24 horas en un día. "
-                       f"Ya tienes {total_actual} horas cargadas en {carga.fecha}"
+                status_code=400,
+                detail=f"No se pueden cargar más de 8 horas en un día. Total actual: {total_actual} hs"
             )
         
         # Insertar carga de horas
@@ -119,53 +104,54 @@ class CargaHorasService:
         """)
         
         result = db.execute(query, {
-            "recurso_id": str(recurso_id),
-            "tarea_id": str(carga.tarea_id),
-            "proyecto_id": str(carga.proyecto_id),
+            "recurso_id": recurso_id,
+            "tarea_id": carga.tarea_id,
+            "proyecto_id": carga.proyecto_id,
             "fecha": carga.fecha,
             "horas": float(carga.horas),
             "descripcion": carga.descripcion
         })
         
         row = result.fetchone()
+        
+        # --- FIX: Guardar datos antes del commit para evitar errores de cursor ---
+        nuevo_id = str(row[0])
+        fecha_creacion = row[1]
+        
         db.commit()
         
         return {
-            "id": str(row[0]),
-            "recurso_id": str(recurso_id),
-            "tarea_id": str(carga.tarea_id),
-            "proyecto_id": str(carga.proyecto_id),
+            "id": nuevo_id,
+            "recurso_id": recurso_id,
+            "tarea_id": carga.tarea_id,
+            "proyecto_id": carga.proyecto_id,
             "fecha": carga.fecha,
             "horas": float(carga.horas),
             "descripcion": carga.descripcion,
-            "created_at": row[1]
+            "created_at": fecha_creacion
         }
     
     @staticmethod
     def obtener_calendario_semanal(
         db: Session, 
-        recurso_id: UUID, 
+        recurso_id: str, # Cambiado a str
         fecha_referencia: date
     ) -> Dict[str, Any]:
         """
         Obtiene el calendario semanal de un recurso.
-        La fecha_referencia se ajusta automáticamente al lunes de esa semana.
+        Ordenado cronológicamente por creación para efecto 'Cola'.
         """
         
-        # Ajustar al lunes de la semana
         dias_desde_lunes = fecha_referencia.weekday()
         fecha_inicio = fecha_referencia - timedelta(days=dias_desde_lunes)
         fecha_fin = fecha_inicio + timedelta(days=6)
         
-        # Obtener recurso
-        recurso = api_client.get_recurso(str(recurso_id))
+        recurso = api_client.get_recurso(recurso_id)
         if not recurso:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Recurso no encontrado"
-            )
+            raise HTTPException(status_code=404, detail="Recurso no encontrado")
         
-        # Obtener todas las cargas de la semana
+        # --- CAMBIO CLAVE: Ordenar por fecha y LUEGO por created_at ASC ---
+        # Esto garantiza que las tareas se dibujen en el orden que fueron cargadas
         query = text("""
             SELECT 
                 id, fecha, horas, descripcion,
@@ -173,43 +159,37 @@ class CargaHorasService:
             FROM carga_horas
             WHERE recurso_id = :recurso_id
               AND fecha BETWEEN :fecha_inicio AND :fecha_fin
-            ORDER BY fecha, proyecto_id
+            ORDER BY fecha ASC, created_at ASC 
         """)
         
         result = db.execute(query, {
-            "recurso_id": str(recurso_id),
+            "recurso_id": recurso_id,
             "fecha_inicio": fecha_inicio,
             "fecha_fin": fecha_fin
         })
         
-        # Obtener proyectos y tareas (cachear para no hacer requests repetidos)
         proyectos_cache = {}
         tareas_cache = {}
-        
-        # Organizar por dia
         dias_dict = {}
         
         for row in result:
-            carga_id = row[0]
+            carga_id = str(row[0])
             fecha = row[1]
             horas = Decimal(str(row[2]))
             descripcion = row[3]
             proyecto_id = str(row[4])
             tarea_id = str(row[5])
             
-            # Obtener proyecto (con cache)
             if proyecto_id not in proyectos_cache:
                 proyectos_cache[proyecto_id] = api_client.get_proyecto(proyecto_id)
             proyecto = proyectos_cache[proyecto_id]
             
-            # Obtener tarea (con cache)
             if tarea_id not in tareas_cache:
                 tareas_cache[tarea_id] = api_client.get_tarea(tarea_id)
             tarea = tareas_cache[tarea_id]
             
-            # Crear entrada
             entrada = {
-                "carga_id": str(carga_id),
+                "carga_id": carga_id,
                 "proyecto_id": proyecto_id,
                 "proyecto_nombre": proyecto.get('nombre', 'N/A') if proyecto else 'N/A',
                 "tarea_id": tarea_id,
@@ -218,7 +198,6 @@ class CargaHorasService:
                 "descripcion": descripcion
             }
             
-            # Agregar al día correspondiente
             fecha_str = str(fecha)
             if fecha_str not in dias_dict:
                 dias_dict[fecha_str] = {
@@ -231,7 +210,6 @@ class CargaHorasService:
             dias_dict[fecha_str]["total_horas"] += horas
             dias_dict[fecha_str]["entradas"].append(entrada)
         
-        # Crear lista de 7 dias (incluir dias sin cargas)
         dias = []
         total_semana = Decimal(0)
         fecha_actual = fecha_inicio
@@ -257,7 +235,7 @@ class CargaHorasService:
             fecha_actual += timedelta(days=1)
         
         return {
-            "recurso_id": str(recurso_id),
+            "recurso_id": recurso_id,
             "recurso_nombre": f"{recurso.get('nombre', '')} {recurso.get('apellido', '')}".strip(),
             "fecha_inicio": fecha_inicio,
             "fecha_fin": fecha_fin,
@@ -268,87 +246,40 @@ class CargaHorasService:
     @staticmethod
     def obtener_estadisticas_recurso(
         db: Session,
-        recurso_id: UUID
+        recurso_id: str # Cambiado a str
     ) -> Dict[str, Any]:
         """Obtiene estadísticas generales de un recurso"""
         
-        # Obtener recurso
-        recurso = api_client.get_recurso(str(recurso_id))
+        recurso = api_client.get_recurso(recurso_id)
         if not recurso:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Recurso no encontrado"
-            )
+            raise HTTPException(status_code=404, detail="Recurso no encontrado")
         
         hoy = date.today()
-        
-        # Inicio del mes actual
         inicio_mes = date(hoy.year, hoy.month, 1)
-        
-        # Inicio de la semana actual (lunes)
         dias_desde_lunes = hoy.weekday()
         inicio_semana = hoy - timedelta(days=dias_desde_lunes)
         
-        # Total horas del mes
-        query_mes = text("""
-            SELECT COALESCE(SUM(horas), 0)
-            FROM carga_horas
-            WHERE recurso_id = :recurso_id
-              AND fecha >= :inicio_mes
-        """)
-        
-        result = db.execute(query_mes, {
-            "recurso_id": str(recurso_id),
-            "inicio_mes": inicio_mes
-        })
+        query_mes = text("SELECT COALESCE(SUM(horas), 0) FROM carga_horas WHERE recurso_id = :recurso_id AND fecha >= :inicio_mes")
+        result = db.execute(query_mes, {"recurso_id": recurso_id, "inicio_mes": inicio_mes})
         total_mes = Decimal(str(result.scalar()))
         
-        # Total horas de la semana
-        query_semana = text("""
-            SELECT COALESCE(SUM(horas), 0)
-            FROM carga_horas
-            WHERE recurso_id = :recurso_id
-              AND fecha >= :inicio_semana
-        """)
-        
-        result = db.execute(query_semana, {
-            "recurso_id": str(recurso_id),
-            "inicio_semana": inicio_semana
-        })
+        query_semana = text("SELECT COALESCE(SUM(horas), 0) FROM carga_horas WHERE recurso_id = :recurso_id AND fecha >= :inicio_semana")
+        result = db.execute(query_semana, {"recurso_id": recurso_id, "inicio_semana": inicio_semana})
         total_semana = Decimal(str(result.scalar()))
         
-        # Proyectos activos (con horas en el mes)
-        query_proyectos = text("""
-            SELECT COUNT(DISTINCT proyecto_id)
-            FROM carga_horas
-            WHERE recurso_id = :recurso_id
-              AND fecha >= :inicio_mes
-        """)
-        
-        result = db.execute(query_proyectos, {
-            "recurso_id": str(recurso_id),
-            "inicio_mes": inicio_mes
-        })
+        query_proyectos = text("SELECT COUNT(DISTINCT proyecto_id) FROM carga_horas WHERE recurso_id = :recurso_id AND fecha >= :inicio_mes")
+        result = db.execute(query_proyectos, {"recurso_id": recurso_id, "inicio_mes": inicio_mes})
         proyectos_activos = result.scalar()
         
-        # Promedio de horas diarias (últimos 30 días con horas)
         query_promedio = text("""
-            SELECT COALESCE(AVG(total_dia), 0)
-            FROM (
-                SELECT SUM(horas) as total_dia
-                FROM carga_horas
-                WHERE recurso_id = :recurso_id
-                  AND fecha >= :hace_30_dias
-                GROUP BY fecha
-                HAVING SUM(horas) > 0
+            SELECT COALESCE(AVG(total_dia), 0) FROM (
+                SELECT SUM(horas) as total_dia FROM carga_horas 
+                WHERE recurso_id = :recurso_id AND fecha >= :hace_30_dias 
+                GROUP BY fecha HAVING SUM(horas) > 0
             ) dias_con_horas
         """)
-        
         hace_30_dias = hoy - timedelta(days=30)
-        result = db.execute(query_promedio, {
-            "recurso_id": str(recurso_id),
-            "hace_30_dias": hace_30_dias
-        })
+        result = db.execute(query_promedio, {"recurso_id": recurso_id, "hace_30_dias": hace_30_dias})
         promedio = Decimal(str(result.scalar()))
         
         return {
