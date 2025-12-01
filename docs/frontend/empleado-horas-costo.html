@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Costos</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+
+    <link rel="stylesheet" href="css/stylesEmpleado.css">
+</head>
+
+<body>
+
+<div class="layout">
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar"><span class="material-icons">person</span></div>
+            <div>
+                <p class="profile-name">Cargando...</p>
+                <p class="profile-role">-</p>
+            </div>
+        </div>
+
+        <nav class="menu">
+            <a href="empleado.html"><span class="material-icons">schedule</span> Cargar Horas</a>
+            <a href="reporte.html"><span class="material-icons">assessment</span> Reporte</a>
+            <a href="empleado-horas-costo.html" class="active"><span class="material-icons">attach_money</span> Análisis de Costos</a>
+        </nav>
+
+        <div class="logout">
+            <a href="#"><span class="material-icons">logout</span> Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <main class="content">
+        <h1>Análisis de Costos</h1>
+        <p class="subtitle">Visualización de costos por empleado basados en horas trabajadas.</p>
+
+        <div id="loading" style="display: block; text-align: center; padding: 40px;">
+            <p>Cargando datos de costos...</p>
+        </div>
+
+        <div id="error-message" style="display: none; background-color: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 20px; margin: 20px 0; border-radius: 10px;">
+            <p id="error-text"></p>
+        </div>
+
+        <div id="costos-container" style="display: none;">
+            <div class="card" style="margin-bottom: 20px;">
+                <h3 style="margin-top: 0;">Resumen General</h3>
+                <div class="grid-3">
+                    <div>
+                        <p style="color: #64748b; margin: 0; font-size: 14px;">Total Empleados</p>
+                        <p id="total-empleados" style="font-size: 24px; font-weight: 600; margin: 8px 0 0 0;">0</p>
+                    </div>
+                    <div>
+                        <p style="color: #64748b; margin: 0; font-size: 14px;">Costo Total</p>
+                        <p id="costo-total" style="font-size: 24px; font-weight: 600; margin: 8px 0 0 0; color: #059669;">$0</p>
+                    </div>
+                    <div>
+                        <p style="color: #64748b; margin: 0; font-size: 14px;">Promedio por Empleado</p>
+                        <p id="promedio-empleado" style="font-size: 24px; font-weight: 600; margin: 8px 0 0 0;">$0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0;">Costos por Empleado</h3>
+                <div id="tabla-costos">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e2e8f0;">
+                                <th style="text-align: left; padding: 12px; font-weight: 600;">Empleado</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600;">Rol</th>
+                                <th style="text-align: right; padding: 12px; font-weight: 600;">Horas Totales</th>
+                                <th style="text-align: right; padding: 12px; font-weight: 600;">Costo Total</th>
+                                <th style="text-align: right; padding: 12px; font-weight: 600;">Costo por Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-body">
+                            <!-- Los datos se cargarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="js/empleado-horas-costo.js"></script>
+
+</body>
+</html>
+

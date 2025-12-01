@@ -7,8 +7,7 @@ CREATE TABLE IF NOT EXISTS carga_horas (
     proyecto_id VARCHAR(50) NOT NULL,
     cliente_id INTEGER,
     fecha DATE NOT NULL,
-    -- REGLA DE NEGOCIO: Maximo 8 horas por carga individual
-    horas DECIMAL(5,2) NOT NULL CHECK (horas > 0 AND horas <= 8),
+    horas DECIMAL(5,2) NOT NULL CHECK (horas > 0 AND horas <= 24), --maximo 24 horas (permite guardias)
     descripcion TEXT, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -18,7 +17,6 @@ CREATE INDEX idx_carga_horas_fecha ON carga_horas(fecha);
 CREATE INDEX idx_carga_horas_proyecto ON carga_horas(proyecto_id);
 CREATE INDEX idx_carga_horas_recurso_fecha ON carga_horas(recurso_id, fecha);
 
--- Funcion para validar el total diario (Regla de Negocio)
 CREATE OR REPLACE FUNCTION validar_horas_diarias()
 RETURNS TRIGGER AS $$
 DECLARE 
@@ -30,9 +28,8 @@ BEGIN
         AND fecha = NEW.fecha
         AND id != COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::UUID);
 
-    -- REGLA DE NEGOCIO: No mas de 8 horas TOTALES por dia
-    IF (total_horas_diarias + NEW.horas > 8) THEN
-        RAISE EXCEPTION 'No se puede cargar mas de 8 horas por dia';
+    IF (total_horas_diarias + NEW.horas > 24) THEN
+        RAISE EXCEPTION 'No se puede cargar mas de 24 horas por dia';
     END IF;
 
     RETURN NEW;

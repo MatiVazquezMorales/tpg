@@ -3,11 +3,12 @@ body {
     font-family: Inter, sans-serif;
     background: #f8fafc;
     color: #1e293b;
+    height: auto; 
 }
 
 .layout {
     display: flex;
-    height: 100vh;
+    min-height: 100vh;
 }
 
 .sidebar {
@@ -123,7 +124,7 @@ input, select, textarea {
 
 .grid-3 {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
 }
 
@@ -228,7 +229,7 @@ input, select, textarea {
 
 .calendar-header {
     display: grid;
-    grid-template-columns: 60px repeat(5, 1fr);
+    grid-template-columns: 60px repeat(7, 1fr);
     background: white;
     border-bottom: 1px solid #e2e8f0;
 }
@@ -256,7 +257,7 @@ input, select, textarea {
 
 .calendar-body {
     display: grid;
-    grid-template-columns: 60px repeat(5, 1fr);
+    grid-template-columns: 60px repeat(7, 1fr);
 }
 
 .time-column {
@@ -297,7 +298,6 @@ input, select, textarea {
 .event.yellow { background: #fef9c3; border-color: #facc15; }
 .event.cyan { background: #cffafe; border-color: #06b6d4; }
 
-/* --- Estilos para el Toast (Notificación Emergente) --- */
 .toast {
     position: fixed;
     top: 25px;
@@ -306,9 +306,9 @@ input, select, textarea {
     background: #fff;
     padding: 20px 35px 20px 25px;
     box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-    border-left: 6px solid #2563eb; /* Color azul */
+    border-left: 6px solid #2563eb; 
     overflow: hidden;
-    transform: translateX(calc(100% + 30px)); /* Oculto a la derecha por defecto */
+    transform: translateX(calc(100% + 30px)); 
     transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     z-index: 1000;
     display: flex;
@@ -316,7 +316,7 @@ input, select, textarea {
 }
 
 .toast.active {
-    transform: translateX(0%); /* Se desliza para ser visible */
+    transform: translateX(0%); 
 }
 
 .toast .toast-content {
@@ -369,9 +369,6 @@ input, select, textarea {
     opacity: 1;
 }
 
-/* ... (estilos anteriores del toast) ... */
-
-/* Estilo específico para errores */
 .toast.error {
-    border-left: 6px solid #dc2626; /* Rojo */
+    border-left: 6px solid #dc2626; 
 }

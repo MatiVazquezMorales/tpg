@@ -3,11 +3,10 @@ const API_URL = "http://localhost:8000/api";
 document.addEventListener("DOMContentLoaded", function () {
     inicializarSidebar();
     cargarUsuario();
-    cargarMisTareas();
+    cargarMisProyectos();
     setupListeners();
 });
 
-// --- Lógica de UI (Sidebar) ---
 function inicializarSidebar() {
     const currentPage = location.pathname.split("/").pop();
     document.querySelectorAll('.sidebar .menu a').forEach(link => {
@@ -19,23 +18,18 @@ function inicializarSidebar() {
     });
 }
 
-// --- Lógica de Notificaciones (Toasts) ---
-
 function mostrarNotificacion() {
     const toast = document.getElementById('toast-exito');
     const closeIcon = document.getElementById('toast-close');
     
     if (!toast) return;
 
-    // Mostrar
     toast.classList.add('active');
 
-    // Ocultar automáticamente después de 4 segundos
     let temporizador = setTimeout(() => {
         toast.classList.remove('active');
     }, 4000);
 
-    // Cerrar al hacer click en la X
     if (closeIcon) {
         closeIcon.onclick = () => {
             toast.classList.remove('active');
@@ -51,20 +45,16 @@ function mostrarError(mensaje) {
     
     if (!toast) return;
 
-    // Actualizar el mensaje de error
     if (msgElement) {
         msgElement.textContent = mensaje;
     }
 
-    // Mostrar
     toast.classList.add('active');
 
-    // Ocultar automáticamente después de 5 segundos (un poco más largo para leer el error)
     let temporizador = setTimeout(() => {
         toast.classList.remove('active');
     }, 5000);
 
-    // Cerrar al hacer click en la X
     if (closeIcon) {
         closeIcon.onclick = () => {
             toast.classList.remove('active');
@@ -72,8 +62,6 @@ function mostrarError(mensaje) {
         };
     }
 }
-
-// --- Lógica de Datos ---
 
 async function cargarUsuario() {
     try {
@@ -86,20 +74,55 @@ async function cargarUsuario() {
     } catch (e) { console.error(e); }
 }
 
-async function cargarMisTareas() {
-    const select = document.getElementById('select-tarea');
-    select.innerHTML = '<option value="">Cargando tareas...</option>';
+async function cargarMisProyectos() {
+    const select = document.getElementById('select-proyecto');
+    select.innerHTML = '<option value="">Cargando proyectos...</option>';
 
     try {
-        const res = await fetch(`${API_URL}/tareas/me`);
+        const res = await fetch(`${API_URL}/proyectos`);
+        if (!res.ok) throw new Error("Error cargando proyectos");
+        
+        const proyectos = await res.json();
+        
+        select.innerHTML = '<option value="">Seleccione un proyecto...</option>';
+        
+        select.dataset.proyectos = JSON.stringify(proyectos);
+
+        proyectos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.nombre;
+            select.appendChild(opt);
+        });
+
+    } catch (error) {
+        console.error(error);
+        select.innerHTML = '<option value="">Error al cargar proyectos</option>';
+    }
+}
+
+async function cargarTareasProyecto(proyectoId) {
+    const select = document.getElementById('select-tarea');
+    const card = document.getElementById('detalle-carga');
+    
+    select.innerHTML = '<option value="">Cargando tareas...</option>';
+    select.disabled = true;
+    card.style.display = 'none';
+
+    try {
+        const res = await fetch(`${API_URL}/proyectos/${proyectoId}/tareas`);
         if (!res.ok) throw new Error("Error cargando tareas");
         
         const tareas = await res.json();
         
         select.innerHTML = '<option value="">Seleccione una tarea...</option>';
         
-        // Guardamos las tareas en el dataset para poder leer el proyectoId después
+        if (tareas.length === 0) {
+            select.innerHTML = '<option value="">No hay tareas asignadas en este proyecto</option>';
+            select.disabled = true;
+        } else {
         select.dataset.tareas = JSON.stringify(tareas);
+            select.disabled = false;
 
         tareas.forEach(t => {
             const opt = document.createElement('option');
@@ -107,10 +130,12 @@ async function cargarMisTareas() {
             opt.textContent = t.nombre;
             select.appendChild(opt);
         });
+        }
 
     } catch (error) {
         console.error(error);
         select.innerHTML = '<option value="">Error al cargar tareas</option>';
+        select.disabled = true;
     }
 }
 
@@ -139,7 +164,24 @@ async function cargarInfoProyecto(proyectoId) {
 
 function setupListeners() {
     
-    // AL CAMBIAR LA SELECCIÓN DE TAREA
+    // Listener para selección de proyecto
+    document.getElementById('select-proyecto').addEventListener('change', (e) => {
+        const proyectoId = e.target.value;
+        const selectTarea = document.getElementById('select-tarea');
+        const card = document.getElementById('detalle-carga');
+        
+        if (!proyectoId) {
+            selectTarea.innerHTML = '<option value="">Primero seleccione un proyecto...</option>';
+            selectTarea.disabled = true;
+            card.style.display = 'none';
+            return;
+        }
+
+        // Cargar tareas del proyecto seleccionado
+        cargarTareasProyecto(proyectoId);
+    });
+    
+    // Listener para selección de tarea
     document.getElementById('select-tarea').addEventListener('change', (e) => {
         const tareaId = e.target.value;
         const card = document.getElementById('detalle-carga');
@@ -166,8 +208,10 @@ function setupListeners() {
                 estadoElem.style.color = 'red';
             }
 
-            if (tarea.proyectoId) {
-                cargarInfoProyecto(tarea.proyectoId);
+            // Obtener el proyecto seleccionado
+            const proyectoId = document.getElementById('select-proyecto').value;
+            if (proyectoId) {
+                cargarInfoProyecto(proyectoId);
             } else {
                 document.getElementById('info-proyecto-nombre').textContent = "Sin Proyecto";
             }
@@ -178,6 +222,11 @@ function setupListeners() {
             if (!inputFecha.value) {
                 inputFecha.valueAsDate = new Date();
             }
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dd = String(hoy.getDate()).padStart(2, '0');
+            inputFecha.max = `${yyyy}-${mm}-${dd}`;
         }
     });
 
@@ -190,6 +239,7 @@ function setupListeners() {
     // BOTÓN CARGAR HORAS
     document.getElementById('btn-cargar').addEventListener('click', async () => {
         const btn = document.getElementById('btn-cargar');
+        const proyectoId = document.getElementById('select-proyecto').value;
         const tareaId = document.getElementById('select-tarea').value;
         
         const tareas = JSON.parse(document.getElementById('select-tarea').dataset.tareas || "[]");
@@ -199,20 +249,25 @@ function setupListeners() {
         const horas = document.getElementById('input-horas').value;
         const notas = document.getElementById('input-notas').value;
 
-        // Validación local básica
-        if (!tareaId || !fecha || !horas || !notas) {
-            mostrarError("Por favor complete los campos obligatorios (Tarea, Fecha, Horas, Notas)");
+        if (!proyectoId || !tareaId || !fecha || !horas) {
+            mostrarError("Por favor complete los campos obligatorios (Proyecto, Tarea, Fecha, Horas)");
+            return;
+        }
+
+        const fechaSeleccionada = new Date(fecha);
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (fechaSeleccionada > hoy) {
+            mostrarError("No se puede registrar horas para días futuros.");
             return;
         }
 
         const horasNum = parseFloat(horas);
-        if (horasNum > 8) {
-            mostrarError("No se permite cargar más de 8 horas en un solo registro.");
-            return; // El 'return' detiene la ejecución, así no llama a la API.
+        if (horasNum > 24) {
+            mostrarError("No se permite cargar más de 24 horas en un solo registro.");
+            return;
         }
-        // --------------------------------------------------
 
-        // Validación 3: Horas negativas (por seguridad extra)
         if (horasNum <= 0) {
              mostrarError("Las horas deben ser mayores a 0.");
              return;
@@ -220,9 +275,9 @@ function setupListeners() {
 
         const payload = {
             tarea_id: tareaId,
-            proyecto_id: tarea.proyectoId,
+            proyecto_id: proyectoId,
             fecha: fecha,
-            horas: parseFloat(horas),
+            horas: horasNum,
             descripcion: notas
         };
 
@@ -237,17 +292,13 @@ function setupListeners() {
             });
 
             if (res.ok) {
-                // ¡Éxito! Mostramos el cartel verde
                 mostrarNotificacion();
                 
-                // Limpiamos formulario
                 document.getElementById('input-horas').value = "";
                 document.getElementById('input-notas').value = "";
             } else {
-                // Si hay error (ej: > 8 horas), mostramos el cartel rojo con el detalle
                 try {
                     const err = await res.json();
-                    // err.detail contiene el mensaje del backend ("No se pueden cargar más de 8 horas...")
                     mostrarError(err.detail || "Ocurrió un error desconocido");
                 } catch (jsonError) {
                     mostrarError(`Error del servidor (${res.status}). Intente nuevamente.`);

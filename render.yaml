@@ -1,0 +1,53 @@
+services:
+  # Servicio Web para el Backend
+  - type: web
+    name: carga-horas-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    # Vincular la base de datos - Render proporcionará DATABASE_URL automáticamente
+    envVars:
+      # Puerto - Render lo asigna automáticamente, pero lo exponemos por si acaso
+      - key: PORT
+        value: 8000
+      
+      # CORS - Permitir cualquier origen (proyecto académico)
+      # Para restringir orígenes, cambiar el valor a una lista separada por comas
+      - key: CORS_ORIGINS
+        value: "*"
+      
+      # Módulo de Finanzas
+      # Para usar el mock (desarrollo/pruebas):
+      - key: USE_FINANZAS_MOCK
+        value: "false"  # Cambiar a "true" si quieres usar el mock
+      
+      # URL base del módulo de finanzas (sin el endpoint específico)
+      # El código usará GET /api/tarifas para obtener las tarifas
+      - key: FINANZAS_API_BASE_URL
+        value: https://tpg-squad-10-2025-2c-py9s.onrender.com
+      
+      # Timeout para APIs externas
+      - key: API_TIMEOUT
+        value: "30"
+      
+      # Nivel de logs
+      - key: LOG_LEVEL
+        value: info
+    
+    healthCheckPath: /health
+    
+    # Comando de inicio (opcional, el Dockerfile ya tiene CMD)
+    # Render usará el CMD del Dockerfile por defecto
+
+databases:
+  # Base de datos PostgreSQL
+  # Render proporcionará automáticamente DATABASE_URL al servicio web
+  - name: carga-horas-db
+    databaseName: carga_horas
+    user: carga_horas_user
+    plan: free
+    region: oregon
+    postgresMajorVersion: 15
+

@@ -1,10 +1,15 @@
 const API_URL = "http://localhost:8000/api";
-let fechaReferencia = new Date(); // Fecha actual para controlar la semana
+let fechaReferencia = new Date();
+let recursoIdActual = null; // Para modo gerente
+
+// Obtener recursoId de la URL si existe (modo gerente)
+const urlParams = new URLSearchParams(window.location.search);
+recursoIdActual = urlParams.get('recursoId');
 
 document.addEventListener("DOMContentLoaded", function () {
     inicializarSidebar();
     cargarUsuario();
-    cargarCalendario(); // Carga inicial
+    cargarCalendario(); 
     setupNavegacion();
 });
 
@@ -17,19 +22,35 @@ function inicializarSidebar() {
 
 async function cargarUsuario() {
     try {
-        const res = await fetch(`${API_URL}/recursos/me`);
-        const user = await res.json();
+        let user;
+        if (recursoIdActual) {
+            // Modo gerente: obtener el recurso de la lista de recursos (que ya viene con rol_nombre)
+            const res = await fetch(`${API_URL}/recursos`);
+            if (!res.ok) throw new Error("Error cargando recursos");
+            const recursos = await res.json();
+            user = recursos.find(r => r.id === recursoIdActual);
+            if (!user) throw new Error("Recurso no encontrado");
+        } else {
+            // Modo empleado: cargar información del usuario actual
+            const res = await fetch(`${API_URL}/recursos/me`);
+            if (!res.ok) throw new Error("Error cargando usuario");
+            user = await res.json();
+        }
+        
         document.querySelector('.profile-name').textContent = `${user.nombre} ${user.apellido}`;
         document.querySelector('.profile-role').textContent = user.rol_nombre || "Empleado";
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error(e);
+        document.querySelector('.profile-name').textContent = "Error";
+        document.querySelector('.profile-role').textContent = "No disponible";
+    }
 }
 
-// --- Lógica del Calendario ---
 
 function getLunes(d) {
     d = new Date(d);
     var day = d.getDay(),
-        diff = d.getDate() - day + (day == 0 ? -6 : 1); // Ajustar cuando es domingo
+        diff = d.getDate() - day + (day == 0 ? -6 : 1); 
     return new Date(d.setDate(diff));
 }
 
@@ -39,9 +60,8 @@ function formatearFechaISO(date) {
 
 async function cargarCalendario() {
     const lunes = getLunes(fechaReferencia);
-    const fechaStr = formatearFechaISO(lunes); // YYYY-MM-DD del lunes de esa semana
+    const fechaStr = formatearFechaISO(lunes); 
     
-    // Actualizar etiqueta de la semana
     const finSemana = new Date(lunes);
     finSemana.setDate(lunes.getDate() + 6);
     const opcionesFecha = { month: 'short', day: 'numeric' };
@@ -49,8 +69,16 @@ async function cargarCalendario() {
         `${lunes.toLocaleDateString('es-ES', opcionesFecha)} - ${finSemana.toLocaleDateString('es-ES', opcionesFecha)}, ${lunes.getFullYear()}`;
 
     try {
-        // Llamada al backend
-        const res = await fetch(`${API_URL}/calendario?fecha=${fechaStr}`);
+        let url;
+        if (recursoIdActual) {
+            // Modo gerente: usar endpoint específico para el recurso
+            url = `${API_URL}/recursos/${recursoIdActual}/calendario?fecha=${fechaStr}`;
+        } else {
+            // Modo empleado: usar endpoint del usuario actual
+            url = `${API_URL}/calendario?fecha=${fechaStr}`;
+        }
+        
+        const res = await fetch(url);
         if (!res.ok) throw new Error("Error al cargar calendario");
         
         const data = await res.json();
@@ -63,14 +91,12 @@ async function cargarCalendario() {
 }
 
 function renderizarCalendario(data) {
-    // 1. Actualizar Headers (Lun 21, Mar 22...)
     data.dias.forEach((dia, index) => {
         const header = document.getElementById(`header-${index}`);
         if (header) {
-            const fechaObj = new Date(dia.fecha + 'T00:00:00'); // Hack para evitar timezone offset
+            const fechaObj = new Date(dia.fecha + 'T00:00:00'); 
             header.querySelector('.day-number').textContent = fechaObj.getDate();
             
-            // Resaltar si es hoy
             const hoy = new Date();
             if (fechaObj.toDateString() === hoy.toDateString()) {
                 header.classList.add('highlight');
@@ -82,31 +108,25 @@ function renderizarCalendario(data) {
         }
     });
 
-    // 2. Limpiar columnas
     for (let i = 0; i < 7; i++) {
         const col = document.getElementById(`col-dia-${i}`);
         if (col) col.innerHTML = ''; 
     }
 
-    // 3. Renderizar Eventos (Bloques de horas)
     data.dias.forEach((dia, index) => {
         const col = document.getElementById(`col-dia-${index}`);
         if (!col) return;
 
-        // Variable para "apilar" visualmente las tareas. 
-        // Asumimos que el día empieza a las 9:00 (fila 1)
         let filaActual = 1; 
 
         dia.entradas.forEach(entrada => {
-            // Calculamos altura: 1 hora = 1 fila aprox (depende del CSS grid)
-            // Si cargó 2.5 horas, redondeamos visualmente o usamos span
+            
             const horas = parseFloat(entrada.horas);
-            const span = Math.max(1, Math.round(horas)); // Mínimo ocupa 1 espacio
+            const span = Math.max(1, Math.round(horas)); 
 
             const div = document.createElement('div');
             div.className = `event ${getColorPorProyecto(entrada.proyecto_nombre)}`;
             
-            // Estilo Grid: Start / Span
             div.style.gridRow = `${filaActual} / span ${span}`;
             
             div.innerHTML = `
@@ -115,28 +135,24 @@ function renderizarCalendario(data) {
                 <span style="font-size:0.8em; opacity:0.8">${horas} hs</span>
             `;
             
-            // Tooltip simple
             div.title = `${entrada.descripcion || ''}`;
 
             col.appendChild(div);
 
-            // Avanzamos la fila para el siguiente bloque
             filaActual += span;
         });
     });
 
-    // 4. Actualizar Total
     document.getElementById('total-horas-semana').textContent = data.total_semana;
 }
 
-// Función auxiliar para dar colores distintos según el proyecto
 function getColorPorProyecto(nombreProyecto) {
     if (!nombreProyecto) return 'blue';
     const primerLetra = nombreProyecto.charCodeAt(0);
-    if (primerLetra % 4 === 0) return 'blue';   // stylesEmpleado.css: .event.blue
-    if (primerLetra % 4 === 1) return 'green';  // .event.green
-    if (primerLetra % 4 === 2) return 'yellow'; // .event.yellow
-    return 'cyan';                              // .event.cyan
+    if (primerLetra % 4 === 0) return 'blue'; 
+    if (primerLetra % 4 === 1) return 'green';  
+    if (primerLetra % 4 === 2) return 'yellow'; 
+    return 'cyan';                              
 }
 
 function setupNavegacion() {

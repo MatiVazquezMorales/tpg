@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: carga_horas_db
+    environment:
+      POSTGRES_DB: carga_horas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docs/backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carga_horas_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/carga_horas
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: carga_horas
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      USE_FINANZAS_MOCK: ${USE_FINANZAS_MOCK:-true}
+      FINANZAS_API_URL: ${FINANZAS_API_URL:-http://servidor-finanzas:8001/api/finanzas/calcular-costos}
+    volumes:
+      - ./docs/backend:/app/backend
+      - ./docs/frontend:/app/frontend
+    depends_on:
+      - db
+    # Para desarrollo local (con hot-reload):
+    command: uvicorn main.main:app --host 0.0.0.0 --port 8000 --reload
+    # Para producción (sin hot-reload, usa el CMD del Dockerfile):
+    # command: uvicorn main.main:app --host 0.0.0.0 --port 8000
+
+  nginx:
+    image: nginx:alpine
+    container_name: carga_horas_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docs/frontend:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

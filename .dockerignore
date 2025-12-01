@@ -1,0 +1,46 @@
+# Ignorar el entorno virtual
+venv/
+env/
+.venv/
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Gradle
+.gradle/
+build/
+gradle/
+gradlew
+gradlew.bat
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentación y archivos de desarrollo
+docs/meetings/
+docs/requirements/
+*.md
+README.md
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de logs
+*.log
+
+# Variables de entorno
+.env
+.env.local

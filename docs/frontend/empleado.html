@@ -29,13 +29,13 @@
                 <span class="material-icons">schedule</span>
                 Cargar Horas
             </a>
-            <a href="notificacionEmpleado.html">
-                <span class="material-icons">notifications</span>
-                Notificaciones
-            </a>
             <a href="reporte.html">
                 <span class="material-icons">assessment</span>
                 Reporte
+            </a>
+            <a href="empleado-horas-costo.html">
+                <span class="material-icons">attach_money</span>
+                Análisis de Costos
             </a>
         </nav>
 
@@ -51,17 +51,24 @@
 
         <section class="main-section">
             <h1>Registro de Horas</h1>
-            <p class="subtitle">Seleccione una de sus tareas asignadas para registrar horas.</p>
+            <p class="subtitle">Seleccione un proyecto y luego una de sus tareas asignadas para registrar horas.</p>
+
+            <div style="margin: 20px 0;">
+                <label for="select-proyecto" style="display:block; margin-bottom:8px; font-weight:500;">Mis Proyectos</label>
+                <select id="select-proyecto" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="">Cargando sus proyectos...</option>
+                </select>
+            </div>
 
             <div style="margin: 20px 0;">
                 <label for="select-tarea" style="display:block; margin-bottom:8px; font-weight:500;">Mis Tareas Asignadas</label>
-                <select id="select-tarea" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc;">
-                    <option value="">Cargando sus tareas...</option>
+                <select id="select-tarea" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc;" disabled>
+                    <option value="">Primero seleccione un proyecto...</option>
                 </select>
             </div>
 
             <div id="detalle-carga" class="card" style="display: none;">
-                
+
                 <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
                     <h3 style="margin: 0 0 5px 0; color: #1e3a8a; font-size: 16px;">Proyecto: <span id="info-proyecto-nombre">...</span></h3>
                     <p id="info-proyecto-desc" style="margin: 0; color: #475569; font-size: 14px; line-height: 1.4;">...</p>
@@ -70,13 +77,8 @@
                 <h2 id="titulo-tarea" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">-</h2>
 
                 <div class="grid-3">
-                    <div>
-                        <p id="info-tipo">-</p>
-                    </div>
-
-                    <div>
-                        <p id="info-estado">-</p>
-                    </div>
+                    <div><p id="info-tipo">-</p></div>
+                    <div><p id="info-estado">-</p></div>
                 </div>
 
                 <div class="grid-2">
@@ -87,12 +89,12 @@
 
                     <div>
                         <label for="input-horas">Horas</label>
-                        <input type="number" id="input-horas" placeholder="Ej: 4.5" min="0" max="8" step="0.5">
+                        <input type="number" id="input-horas" placeholder="Ej: 4.5" min="0" max="24" step="0.5">
                     </div>
                 </div>
 
                 <div>
-                    <label for="input-notas">Notas</label>
+                    <label for="input-notas">Notas <span style="color: #64748b; font-weight: normal;">(Recomendado)</span></label>
                     <textarea id="input-notas" rows="4" placeholder="Descripción del trabajo realizado..."></textarea>
                 </div>
 
@@ -117,7 +119,6 @@
     <span class="material-icons close" id="toast-close">close</span>
 </div>
 
-<!-- NOTIFICACIÓN DE ERROR (ROJO) - NUEVO -->
 <div class="toast error" id="toast-error">
     <div class="toast-content">
         <span class="material-icons check" style="background-color: #dc2626;">error</span>

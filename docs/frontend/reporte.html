@@ -4,10 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reporte de Horas</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+
     <link rel="stylesheet" href="css/stylesEmpleado.css">
 </head>
+
 <body>
 
 <div class="layout">
@@ -19,30 +22,33 @@
                 <p class="profile-role">-</p>
             </div>
         </div>
+
         <nav class="menu">
             <a href="empleado.html"><span class="material-icons">schedule</span> Cargar Horas</a>
-            <a href="notificacionEmpleado.html"><span class="material-icons">notifications</span> Notificaciones</a>
             <a href="reporte.html" class="active"><span class="material-icons">assessment</span> Reporte</a>
+            <a href="empleado-horas-costo.html"><span class="material-icons">attach_money</span> Análisis de Costos</a>
         </nav>
-        <div class="logout"><a href="#"><span class="material-icons">logout</span> Cerrar Sesión</a></div>
+
+        <div class="logout">
+            <a href="#"><span class="material-icons">logout</span> Cerrar Sesión</a>
+        </div>
     </aside>
 
     <main class="content">
+
         <h1>Reporte de horas semanal</h1>
         <p class="subtitle">Visualización de cargas de trabajo por día.</p>
 
-        <!-- Navegación de Semanas -->
-        <div class="week-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-            <button id="prev-week" class="btn-secondary" style="padding: 5px 10px;">‹</button>
-            <span id="week-label" class="week-label" style="font-weight: bold; font-size: 1.1em;">Cargando semana...</span>
-            <button id="next-week" class="btn-secondary" style="padding: 5px 10px;">›</button>
-            <button id="btn-hoy" class="btn-primary" style="font-size: 0.8em; padding: 6px 12px;">Hoy</button>
+        <div class="week-nav">
+            <button id="prev-week" class="btn-secondary">‹</button>
+            <span id="week-label" class="week-label">Cargando semana...</span>
+            <button id="next-week" class="btn-secondary">›</button>
+            <button id="btn-hoy" class="btn-primary">Hoy</button>
         </div>
 
-        <div class="calendar card" style="overflow-x: auto;">
+        <div class="calendar card">
             <div class="calendar-header">
                 <div class="empty"></div>
-                <!-- Los headers se llenarán dinámicamente con la fecha -->
                 <div class="day-header" id="header-0">Lun <div class="day-number">-</div></div>
                 <div class="day-header" id="header-1">Mar <div class="day-number">-</div></div>
                 <div class="day-header" id="header-2">Mié <div class="day-number">-</div></div>
@@ -52,8 +58,8 @@
                 <div class="day-header" id="header-6">Dom <div class="day-number">-</div></div>
             </div>
 
-            <div class="calendar-body" style="grid-template-columns: 60px repeat(7, 1fr);">
-                <!-- Columna de Horas (Referencia visual) -->
+            <div class="calendar-body">
+
                 <div class="time-column">
                     <div class="time-block">9:00</div>
                     <div class="time-block">10:00</div>
@@ -67,26 +73,26 @@
                     <div class="time-block">18:00</div>
                 </div>
 
-                <!-- Contenedores de Eventos por Día (IDs agregados) -->
-                <div class="event-container" id="col-dia-0"></div> <!-- Lunes -->
-                <div class="event-container" id="col-dia-1"></div> <!-- Martes -->
-                <div class="event-container" id="col-dia-2"></div> <!-- Miércoles -->
-                <div class="event-container" id="col-dia-3"></div> <!-- Jueves -->
-                <div class="event-container" id="col-dia-4"></div> <!-- Viernes -->
-                <div class="event-container" id="col-dia-5" style="background: #fcfcfc;"></div> <!-- Sábado -->
-                <div class="event-container" id="col-dia-6" style="background: #fcfcfc;"></div> <!-- Domingo -->
+                <div class="event-container" id="col-dia-0"></div>
+                <div class="event-container" id="col-dia-1"></div>
+                <div class="event-container" id="col-dia-2"></div>
+                <div class="event-container" id="col-dia-3"></div>
+                <div class="event-container" id="col-dia-4"></div>
+                <div class="event-container weekend" id="col-dia-5"></div>
+                <div class="event-container weekend" id="col-dia-6"></div>
             </div>
         </div>
-        
-        <div style="margin-top: 20px; padding: 15px; background: white; border: 1px solid #e2e8f0; border-radius: 8px;">
-            <h3 style="margin-top:0;">Resumen Semanal</h3>
-            <p>Total de horas registradas: <strong id="total-horas-semana" style="font-size: 1.2em; color: #2563eb;">0</strong> hs</p>
+
+        <div class="summary-card">
+            <h3>Resumen Semanal</h3>
+            <p>Total de horas registradas:
+                <strong id="total-horas-semana">0</strong> hs
+            </p>
         </div>
 
     </main>
 </div>
 
-<!-- Vinculamos el nuevo script -->
 <script src="js/reporte.js"></script>
 
 </body>
